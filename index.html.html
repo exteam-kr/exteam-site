@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXTEAM — Ex 마킹 해석기 | Hazardous Area Verification Specialists</title>
+<meta name="description" content="방폭 마킹(Ex db eb IIC T4 Gb 등)을 입력하면 보호방식·가스그룹·온도등급·EPL·설치가능 Zone을 IEC 60079 기준으로 해석해 드립니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --steel:#1B2430;        /* deep graphite header */
+  --steel-2:#2A3644;
+  --paper:#F6F7F8;        /* cool neutral body */
+  --plate:#E8EAED;        /* nameplate metal */
+  --plate-edge:#C6CBD2;
+  --ink:#182231;
+  --ink-soft:#4C5A6B;
+  --amber:#F5A800;        /* safety amber */
+  --amber-ink:#7A5400;
+  --line:#D7DBE0;
+  --ok:#1E7A46;
+  --warn:#B54708;
+  --danger:#B42318;
+  --mono:'IBM Plex Mono',Consolas,monospace;
+  --sans:'IBM Plex Sans KR','Malgun Gothic',sans-serif;
+  --disp:'Archivo','IBM Plex Sans KR',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.65;font-size:16px}
+
+/* ---------- header ---------- */
+header{background:var(--steel);color:#fff;border-bottom:4px solid var(--amber)}
+.hwrap{max-width:960px;margin:0 auto;padding:18px 20px 14px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column}
+.brand .logo{font-family:var(--disp);font-weight:800;font-size:30px;letter-spacing:.06em;color:#fff}
+.brand .logo span{color:var(--amber)}
+.brand .tag{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:#9AA7B5;margin-top:2px}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{font-family:var(--sans);font-weight:500;font-size:14px;background:transparent;color:#C9D2DC;border:1px solid transparent;padding:8px 14px;border-radius:6px 6px 0 0;cursor:pointer}
+nav button:hover{color:#fff}
+nav button.active{background:var(--paper);color:var(--ink);font-weight:700}
+nav button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+main{max-width:960px;margin:0 auto;padding:28px 20px 60px}
+.tabpage{display:none}
+.tabpage.active{display:block}
+h1.pagetitle{font-family:var(--disp);font-size:24px;font-weight:800;letter-spacing:-.01em}
+p.pagesub{color:var(--ink-soft);font-size:14.5px;margin:6px 0 22px}
+
+/* ---------- decoder input ---------- */
+.decoder-box{background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px}
+label.inlabel{font-size:13px;font-weight:700;color:var(--ink-soft);letter-spacing:.04em;display:block;margin-bottom:8px}
+.inrow{display:flex;gap:10px;flex-wrap:wrap}
+#markInput{flex:1;min-width:240px;font-family:var(--mono);font-size:19px;font-weight:600;padding:13px 14px;border:2px solid var(--steel-2);border-radius:8px;background:#FBFCFD;color:var(--ink);letter-spacing:.02em}
+#markInput:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 3px rgba(245,168,0,.22)}
+#decodeBtn{font-family:var(--sans);font-weight:700;font-size:16px;background:var(--steel);color:#fff;border:none;border-radius:8px;padding:13px 26px;cursor:pointer}
+#decodeBtn:hover{background:var(--steel-2)}
+#decodeBtn:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.chips{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chips .cl{font-size:12.5px;color:var(--ink-soft)}
+.chip{font-family:var(--mono);font-size:13px;background:var(--plate);border:1px solid var(--plate-edge);border-radius:20px;padding:4px 12px;cursor:pointer;color:var(--ink)}
+.chip:hover{border-color:var(--amber);background:#FFF6E0}
+
+/* ---------- nameplate result (signature element) ---------- */
+#result{margin-top:26px}
+.nameplate{background:linear-gradient(175deg,#EFF1F4 0%,#E2E6EB 55%,#EAEDF1 100%);border:1px solid var(--plate-edge);border-radius:8px;box-shadow:inset 0 1px 0 #fff,0 2px 8px rgba(24,34,49,.08);padding:22px 24px;position:relative}
+.nameplate::before,.nameplate::after,
+.nameplate .rv1,.nameplate .rv2{content:'';position:absolute;width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#B9C0C9 60%,#8E97A3);box-shadow:inset 0 1px 2px rgba(0,0,0,.25)}
+.nameplate::before{top:9px;left:9px}
+.nameplate::after{top:9px;right:9px}
+.nameplate .rv1{bottom:9px;left:9px}
+.nameplate .rv2{bottom:9px;right:9px}
+.np-mark{font-family:var(--mono);font-weight:600;font-size:clamp(18px,4.2vw,27px);letter-spacing:.04em;text-align:center;border:2px solid var(--ink);border-radius:4px;padding:10px 8px;background:#F4F6F8;margin:4px 18px 16px}
+.np-verdict{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.zbadge{font-family:var(--mono);font-size:13.5px;font-weight:600;padding:5px 13px;border-radius:4px;border:1.5px solid}
+.zbadge.on{background:var(--amber);border-color:var(--amber-ink);color:#241B00}
+.zbadge.off{background:transparent;border-color:var(--plate-edge);color:#98A2AE;text-decoration:line-through}
+table.np-table{width:100%;border-collapse:collapse;font-size:14.5px;background:#fff;border:1px solid var(--plate-edge)}
+.np-table th{font-family:var(--mono);font-size:13px;background:var(--steel);color:#fff;text-align:left;padding:8px 12px;font-weight:600;white-space:nowrap}
+.np-table td{padding:9px 12px;border-top:1px solid var(--line);vertical-align:top}
+.np-table td.code{font-family:var(--mono);font-weight:600;white-space:nowrap}
+.np-table .kname{font-weight:700}
+.np-table .std{font-family:var(--mono);font-size:12.5px;color:var(--ink-soft)}
+.legacy{display:inline-block;font-size:12px;font-weight:700;color:var(--warn);background:#FFF4E5;border:1px solid #F1C08A;border-radius:4px;padding:1px 7px;margin-left:6px}
+
+.notes{margin-top:16px;display:flex;flex-direction:column;gap:8px}
+.note{font-size:14px;border-left:4px solid;border-radius:0 6px 6px 0;padding:9px 13px;background:#fff}
+.note.warn{border-color:var(--amber);background:#FFFBEF}
+.note.info{border-color:var(--steel-2);background:#F2F5F8}
+.note.danger{border-color:var(--danger);background:#FEF3F2}
+.note b{font-weight:700}
+.errbox{border:1.5px solid var(--danger);background:#FEF3F2;color:var(--danger);border-radius:8px;padding:14px 16px;font-size:14.5px}
+
+/* ---------- funnel ---------- */
+.funnel{margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.funnel{grid-template-columns:1fr}}
+.fcard{border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:8px}
+.fcard.ebook{background:#FFF8E6;border:1px solid #EAD494}
+.fcard.ask{background:var(--steel);color:#fff}
+.fcard h3{font-size:15.5px;font-weight:700}
+.fcard p{font-size:13.5px;line-height:1.55}
+.fcard.ebook p{color:#6B5A21}
+.fcard.ask p{color:#B9C4D0}
+.fcard a{align-self:flex-start;font-weight:700;font-size:14px;text-decoration:none;border-radius:6px;padding:8px 16px;margin-top:4px}
+.fcard.ebook a{background:var(--amber);color:#241B00}
+.fcard.ask a{background:#fff;color:var(--steel)}
+.adslot{margin-top:26px;border:1.5px dashed var(--plate-edge);border-radius:8px;padding:14px;text-align:center;font-size:12px;color:#98A2AE;font-family:var(--mono)}
+
+/* ---------- reference tables tab ---------- */
+.refsec{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px 22px;margin-bottom:20px}
+.refsec h2{font-family:var(--disp);font-size:18px;font-weight:800;margin-bottom:4px}
+.refsec p.rs{font-size:13.5px;color:var(--ink-soft);margin-bottom:14px}
+table.ref{width:100%;border-collapse:collapse;font-size:14px}
+.ref th{font-family:var(--mono);font-size:12.5px;background:var(--steel);color:#fff;padding:8px 10px;text-align:left;font-weight:600}
+.ref td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:top}
+.ref td.c{font-family:var(--mono);font-weight:600;white-space:nowrap}
+.ref tr:nth-child(even) td{background:#FAFBFC}
+.zone-cell{font-family:var(--mono);font-weight:600}
+.scroll{overflow-x:auto}
+
+/* ---------- ask tab ---------- */
+.askgrid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px}
+@media(max-width:760px){.askgrid{grid-template-columns:1fr}}
+.askform{background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px}
+.askform h2{font-family:var(--disp);font-size:18px;font-weight:800;margin-bottom:14px}
+.f-field{margin-bottom:14px}
+.f-field label{display:block;font-size:13px;font-weight:700;color:var(--ink-soft);margin-bottom:5px}
+.f-field input[type=text],.f-field input[type=email],.f-field textarea,.f-field select{width:100%;font-family:var(--sans);font-size:14.5px;padding:10px 12px;border:1.5px solid var(--line);border-radius:7px;background:#FBFCFD}
+.f-field textarea{min-height:110px;resize:vertical}
+.f-field input:focus,.f-field textarea:focus,.f-field select:focus{outline:none;border-color:var(--amber)}
+.radio-row{display:flex;flex-direction:column;gap:8px}
+.radio-row label{display:flex;gap:9px;align-items:flex-start;font-size:14px;font-weight:500;color:var(--ink);cursor:pointer}
+.radio-row input{margin-top:4px}
+.radio-row .rdesc{display:block;font-size:12.5px;color:var(--ink-soft);font-weight:400}
+.consent{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--ink-soft);background:#F2F5F8;border-radius:7px;padding:11px 13px;margin:16px 0}
+.consent input{margin-top:3px}
+.askform button{width:100%;font-family:var(--sans);font-weight:700;font-size:16px;background:var(--steel);color:#fff;border:none;border-radius:8px;padding:13px;cursor:pointer}
+.askform button:hover{background:var(--steel-2)}
+.formnote{font-size:12px;color:#98A2AE;margin-top:10px;text-align:center}
+.askside{display:flex;flex-direction:column;gap:16px}
+.sidecard{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+.sidecard h3{font-size:15px;font-weight:700;margin-bottom:8px}
+.sidecard p,.sidecard li{font-size:13.5px;color:var(--ink-soft)}
+.sidecard ol{padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.sidecard .price{font-family:var(--mono);font-weight:600;color:var(--ink)}
+.cred{background:var(--steel);color:#fff}
+.cred h3{color:var(--amber)}
+.cred p{color:#C9D2DC}
+
+/* ---------- biz (기업 서비스) ---------- */
+nav button.bizbtn{border:1px solid var(--amber);color:var(--amber)}
+nav button.bizbtn.active{background:var(--amber);color:#241B00;border-color:var(--amber)}
+.biz-hero{background:var(--steel);color:#fff;border-radius:12px;padding:34px 30px;position:relative;overflow:hidden}
+.biz-hero::after{content:'';position:absolute;top:0;right:0;width:160px;height:100%;background:repeating-linear-gradient(-45deg,var(--amber) 0 14px,transparent 14px 30px);opacity:.14}
+.biz-hero .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.16em;color:var(--amber);margin-bottom:10px}
+.biz-hero h2{font-family:var(--disp);font-size:clamp(22px,4.5vw,30px);font-weight:800;line-height:1.3;margin-bottom:14px}
+.biz-hero p{font-size:14.5px;color:#C9D2DC;max-width:640px}
+.biz-hero p b{color:#fff}
+.pk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:22px}
+@media(max-width:760px){.pk-grid{grid-template-columns:1fr}}
+.pk-card{background:#fff;border:1px solid var(--line);border-top:4px solid var(--amber);border-radius:10px;padding:20px}
+.pk-card .stage{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;color:var(--amber-ink);background:#FFF6E0;border-radius:4px;display:inline-block;padding:3px 9px;margin-bottom:10px}
+.pk-card h3{font-size:16.5px;font-weight:700;margin-bottom:8px}
+.pk-card ul{padding-left:17px;font-size:13.5px;color:var(--ink-soft);display:flex;flex-direction:column;gap:5px}
+.whybox{margin-top:22px;background:#FFFBEF;border:1px solid #EAD494;border-left:5px solid var(--amber);border-radius:0 10px 10px 0;padding:18px 22px}
+.whybox h3{font-size:15.5px;font-weight:700;margin-bottom:8px}
+.whybox li{font-size:14px;color:#5C4A12;margin-left:17px;margin-bottom:4px}
+.trust{margin-top:22px;background:var(--steel);color:#fff;border-radius:10px;padding:20px 22px}
+.trust h3{font-family:var(--disp);font-size:16px;font-weight:800;color:var(--amber);margin-bottom:10px}
+.trust p{font-size:13.5px;color:#C9D2DC}
+.trust .tchips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.trust .tchip{font-family:var(--mono);font-size:12px;border:1px solid #46586C;border-radius:20px;padding:4px 12px;color:#DCE3EA}
+.addon{margin-top:14px;font-size:13.5px;color:var(--ink-soft)}
+.addon b{color:var(--ink)}
+.chk-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:560px){.chk-row{grid-template-columns:1fr}}
+.chk-row label{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500;border:1.5px solid var(--line);border-radius:7px;padding:9px 11px;cursor:pointer}
+.chk-row label:hover{border-color:var(--amber)}
+.biz-strip{margin-top:16px;background:linear-gradient(90deg,var(--steel),var(--steel-2));border-radius:10px;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.biz-strip p{font-size:14px;color:#DCE3EA;font-weight:500}
+.biz-strip p b{color:var(--amber)}
+.biz-strip a{font-weight:700;font-size:13.5px;background:var(--amber);color:#241B00;text-decoration:none;border-radius:6px;padding:8px 16px;white-space:nowrap}
+
+/* ---------- footer / newsletter ---------- */
+footer{background:var(--steel);color:#8E9BA9;margin-top:40px}
+.fwrap{max-width:960px;margin:0 auto;padding:30px 20px}
+.nl{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--steel-2);border-radius:10px;padding:16px 18px;margin-bottom:22px}
+.nl .nlt{flex:1;min-width:220px}
+.nl h3{color:#fff;font-size:15px;font-weight:700}
+.nl p{font-size:12.5px}
+.nl input{font-size:14px;padding:9px 12px;border-radius:6px;border:none;min-width:200px}
+.nl button{font-weight:700;font-size:14px;background:var(--amber);color:#241B00;border:none;border-radius:6px;padding:9px 16px;cursor:pointer}
+.fmeta{font-size:12px;line-height:1.8}
+.fmeta b{color:#C9D2DC}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hwrap">
+    <div class="brand">
+      <div class="logo">EX<span>TEAM</span></div>
+      <div class="tag">HAZARDOUS AREA VERIFICATION SPECIALISTS</div>
+    </div>
+    <nav id="nav">
+      <button class="active" data-tab="decoder">마킹 해석기</button>
+      <button data-tab="tables">Zone·EPL 대응표</button>
+      <button data-tab="ask">기술 문의·솔루션</button>
+      <button data-tab="biz" class="bizbtn">기업 서비스 · TA</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ TAB 1 : DECODER ============ -->
+<section id="tab-decoder" class="tabpage active">
+  <h1 class="pagetitle">Ex 마킹 해석기</h1>
+  <p class="pagesub">장비 명판의 방폭 마킹을 그대로 입력하세요. 보호방식·가스그룹·온도등급·EPL과 설치 가능 Zone을 IEC 60079 기준으로 해석합니다.</p>
+
+  <div class="decoder-box">
+    <label class="inlabel" for="markInput">EX MARKING</label>
+    <div class="inrow">
+      <input id="markInput" type="text" placeholder="예: Ex db eb IIC T4 Gb" autocomplete="off" spellcheck="false">
+      <button id="decodeBtn">해석</button>
+    </div>
+    <div class="chips">
+      <span class="cl">예시:</span>
+      <button class="chip">Ex db eb IIC T4 Gb</button>
+      <button class="chip">Ex ia IIC T6 Ga</button>
+      <button class="chip">Ex d IIB+H2 T4</button>
+      <button class="chip">Ex ec IIC T3 Gc</button>
+      <button class="chip">Ex pxb IIB T4 Gb</button>
+    </div>
+  </div>
+
+  <div id="result" aria-live="polite"></div>
+
+  <div class="funnel">
+    <div class="fcard ebook">
+      <h3 id="ebookTitle">📘 방폭 실무 Tips 전자책 시리즈</h3>
+      <p id="ebookDesc">21년차 Ex 검사자가 현장 사례로 정리한 Unit별 실무 가이드 (Ex d · e · i · 기타 · 배선/검사 · 기계방폭). 마킹 해석 그 다음 단계가 담겨 있습니다.</p>
+      <a id="ebookLink" href="https://kmong.com/@ExMan" target="_blank" rel="noopener">전자책 보러가기</a>
+    </div>
+    <div class="fcard ask">
+      <h3>🔍 이 장비의 적합성 판정이 필요하신가요?</h3>
+      <p>인증서 검토, X-condition 해석, NCR/TQ 대응 논리까지 — IEC 60079 조항 근거의 기술의견서를 제공합니다.</p>
+      <a href="#" data-goto="ask">기술 문의하기</a>
+    </div>
+  </div>
+
+  <div class="biz-strip">
+    <p>🏭 <b>공장 단위</b>의 TA 방폭검사 · 초기/주기검사 · HAVD 구축이 필요하신가요?</p>
+    <a href="#" data-goto="biz">기업 서비스 보기</a>
+  </div>
+
+  <div class="adslot">AD SLOT — 애드센스 승인 후 광고 코드 삽입 영역</div>
+</section>
+
+<!-- ============ TAB 2 : TABLES ============ -->
+<section id="tab-tables" class="tabpage">
+  <h1 class="pagetitle">Zone · EPL 대응표</h1>
+  <p class="pagesub">IEC(Zone/EPL) — ATEX(Category) — 보호방식 상호 대응. 검사·장비선정 실무 기준 요약입니다.</p>
+
+  <div class="refsec">
+    <h2>Zone ↔ EPL ↔ ATEX Category (가스)</h2>
+    <p class="rs">기준: IEC 60079-14 (선정), ATEX 2014/34/EU</p>
+    <div class="scroll">
+    <table class="ref">
+      <tr><th>Zone</th><th>위험 빈도</th><th>요구 EPL</th><th>ATEX Category</th><th>설치 가능 EPL</th></tr>
+      <tr><td class="zone-cell">Zone 0</td><td>폭발성 분위기가 지속·장기간 존재</td><td class="c">Ga</td><td class="c">1G</td><td class="c">Ga</td></tr>
+      <tr><td class="zone-cell">Zone 1</td><td>정상 운전 중 간헐적 생성 가능</td><td class="c">Gb</td><td class="c">2G</td><td class="c">Ga, Gb</td></tr>
+      <tr><td class="zone-cell">Zone 2</td><td>정상 운전 중 생성 가능성 낮고 단시간</td><td class="c">Gc</td><td class="c">3G</td><td class="c">Ga, Gb, Gc</td></tr>
+    </table>
+    </div>
+  </div>
+
+  <div class="refsec">
+    <h2>보호방식 ↔ EPL 매핑 (가스)</h2>
+    <p class="rs">기준: IEC 60079-0 Cl.29.4, IEC 60079-14 Table 12 · 구표기는 신표기 전환 안내 병기</p>
+    <div class="scroll">
+    <table class="ref" id="protTable">
+      <tr><th>코드</th><th>보호방식</th><th>표준</th><th>EPL</th><th>비고</th></tr>
+      <!-- JS로 렌더링 -->
+    </table>
+    </div>
+  </div>
+
+  <div class="refsec">
+    <h2>온도등급 (T-Class)</h2>
+    <p class="rs">장비 최고표면온도 ≤ T등급 온도 &lt; 대상 가스의 발화점(AIT)이어야 함</p>
+    <div class="scroll">
+    <table class="ref">
+      <tr><th>T등급</th><th>최고표면온도</th><th>대표 가스 예</th></tr>
+      <tr><td class="c">T1</td><td>450 °C</td><td>수소, 메탄, 프로판, 암모니아</td></tr>
+      <tr><td class="c">T2</td><td>300 °C</td><td>에틸렌, 부탄</td></tr>
+      <tr><td class="c">T3</td><td>200 °C</td><td>가솔린, 헥산, 황화수소</td></tr>
+      <tr><td class="c">T4</td><td>135 °C</td><td>아세트알데히드, 디에틸에테르</td></tr>
+      <tr><td class="c">T5</td><td>100 °C</td><td>—</td></tr>
+      <tr><td class="c">T6</td><td>85 °C</td><td>이황화탄소</td></tr>
+    </table>
+    </div>
+  </div>
+
+  <div class="funnel">
+    <div class="fcard ask">
+      <h3>🔍 표만으로 판단이 어려운 케이스인가요?</h3>
+      <p>복합방폭, X-condition, 인증서-현장 불일치 — 실제 판정이 필요한 사안은 기술의견서로 답해 드립니다.</p>
+      <a href="#" data-goto="ask">기술 문의하기</a>
+    </div>
+    <div class="fcard ebook">
+      <h3>📘 방폭 실무 Tips — Unit.6 배선·설치·검사·문서화</h3>
+      <p>이 표들의 실전 적용 사례와 검사 체크포인트를 정리한 전자책입니다.</p>
+      <a href="https://kmong.com/gig/350131" target="_blank" rel="noopener">전자책 보러가기</a>
+    </div>
+  </div>
+  <div class="adslot">AD SLOT — 애드센스 승인 후 광고 코드 삽입 영역</div>
+</section>
+
+<!-- ============ TAB 3 : ASK ============ -->
+<section id="tab-ask" class="tabpage">
+  <h1 class="pagetitle">기술 문의 · 솔루션</h1>
+  <p class="pagesub">방폭 관련 기술 질의를 접수합니다. 간단 질의는 무료로 답변드리고, 공식 문서가 필요한 사안은 IEC 60079 조항 근거의 기술의견서(Technical Opinion)로 제공합니다.</p>
+
+  <div class="askgrid">
+    <div class="askform">
+      <h2>질의 접수</h2>
+      <div class="f-field">
+        <label>접수 유형</label>
+        <div class="radio-row">
+          <label><input type="radio" name="qtype" checked disabled>
+            <span>간단 질의 (무료)<span class="rdesc">답변은 익명 처리 후 사례 콘텐츠로 활용될 수 있습니다</span></span></label>
+          <label><input type="radio" name="qtype" disabled>
+            <span>정식 기술의견서 요청 (유료 · 견적 회신)<span class="rdesc">조항 인용 + 인증서 검토 + 판정 논리가 포함된 서면 문서</span></span></label>
+        </div>
+      </div>
+      <p style="font-size:13.5px;color:var(--ink-soft);margin:14px 0 16px">접수 양식에서 유형을 선택하고 질의 내용·장비 정보를 입력해 주세요. 인증서·사진 첨부(최대 5개)가 가능합니다.</p>
+      <a href="https://forms.gle/taRBhrpTTLkvroZz9" target="_blank" rel="noopener" style="display:block;text-align:center;font-weight:700;font-size:16px;background:var(--steel);color:#fff;border-radius:8px;padding:13px;text-decoration:none">질의 접수하기 →</a>
+      <p class="formnote">접수 후 1영업일 내 회신드립니다 · 첨부 시 Google 로그인이 필요합니다</p>
+    </div>
+
+    <div class="askside">
+      <div class="sidecard">
+        <h3>진행 절차</h3>
+        <ol>
+          <li>질의 접수 → 무료/유료 분류 회신</li>
+          <li>유료 건: 견적 확정 후 착수 <span class="price">(난이도별 협의)</span></li>
+          <li>기술의견서 납품 — 판정 · 조항 근거 · 시정 권고 포함</li>
+          <li>후속 질의 1회 무상 지원</li>
+        </ol>
+      </div>
+      <div class="sidecard">
+        <h3>이런 사안을 다룹니다</h3>
+        <p>X-condition(SCOU) 해석 · U인증/Ex Component 조합 판정 · Ta/T-Class 적용 · 인증서-현장 불일치 · NCR/TQ 대응 논리 · HAER/HAVD 구축 자문 · 비전기(ISO 80079-36/37) 포함</p>
+      </div>
+      <div class="sidecard">
+        <h3>공장 단위 프로젝트인가요?</h3>
+        <p>TA 방폭검사, 초기·주기검사, HAVD 구축 등 공장 단위 사안은 <a href="#" data-goto="biz" style="font-weight:700;color:var(--amber-ink)">기업 서비스</a>에서 상담을 접수해 주세요.</p>
+      </div>
+      <div class="sidecard cred">
+        <h3>EXTEAM</h3>
+        <p>21년차 E&amp;I / 15년+ Ex 전문 검사자가 직접 답변합니다.<br>IECEx CoPC (Ex 001·003·004·006·007·008·009) · CompEx Ex11(비전기) 보유 · 대형 석유화학/LNG/FPSO 프로젝트 HAVD 완수 경력.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TAB 4 : BIZ (기업 서비스) ============ -->
+<section id="tab-biz" class="tabpage">
+  <div class="biz-hero">
+    <div class="eyebrow">FOR PLANT OWNERS &amp; MAINTENANCE MANAGERS</div>
+    <h2>다음 Turnaround,<br>방폭검사 계획이 있습니까?</h2>
+    <p>KS C IEC 60079-17에 따른 방폭기기 정밀검사(Detailed Inspection)는 <b>정전 상태</b>가 필요합니다. 가동 중 공장에서 그 기회는 <b>TA 기간뿐</b> — 이번 TA를 놓치면 다음 TA까지 3~4년을 기다려야 합니다. 국내 다수 화학·정유 공장은 아직 HAVD(방폭검증문서) 없이 운영되고 있으며, 대형 신규 프로젝트를 기점으로 KOSHA의 방폭 관련 감독은 강화되는 방향입니다. 감사가 시작된 뒤가 아니라, <b>그 전에 준비하는 공장</b>이 비용과 리스크 모두에서 유리합니다.</p>
+  </div>
+
+  <div class="pk-grid">
+    <div class="pk-card">
+      <div class="stage">PHASE 1 · TA 3~6개월 전</div>
+      <h3>Gap Assessment</h3>
+      <ul>
+        <li>기존 도면·인증서·기기 리스트 기반 <b>HAER 초안</b> 구축</li>
+        <li>검사 대상 기기 선별 및 등급(D/C/V) 배정</li>
+        <li>TA 기간 내 실행 가능한 <b>검사계획서</b> 작성</li>
+        <li>KOSHA 감독 대비 문서 갭 리포트</li>
+      </ul>
+    </div>
+    <div class="pk-card">
+      <div class="stage">PHASE 2 · TA 기간 중</div>
+      <h3>Detailed Inspection</h3>
+      <ul>
+        <li>KS C IEC 60079-17 기준 <b>정밀검사</b> 수행 (전기 + 비전기)</li>
+        <li>자체 디지털 검사 시스템 — <b>실시간 진행률·펀치 대시보드</b></li>
+        <li>펀치 즉시 발행 → TA 내 시정 완료 지원</li>
+        <li>TA 투입 작업자 방폭교육 (반나절 과정, 선택)</li>
+      </ul>
+    </div>
+    <div class="pk-card">
+      <div class="stage">PHASE 3 · TA 이후</div>
+      <h3>HAVD 완성 · 정기검사 체계</h3>
+      <ul>
+        <li>검사기록·인증서·판정근거를 통합한 <b>HAVD 납품</b></li>
+        <li>차기 정기검사 주기 및 유지관리 계획 제안</li>
+        <li>KOSHA audit 대응 문서체계 완성</li>
+        <li>연간 기술자문 계약 (선택)</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="addon">부가 서비스: <b>초기검사</b>(신설·증설 설비) · <b>기술의견서</b>(건별) · <b>방폭 실무교육</b>(작업자/감독자 과정) · <b>비전기 방폭 검증</b>(ISO 80079-36/37 — 국내 공급자 극소수 영역)</p>
+
+  <div class="whybox">
+    <h3>왜 지금인가</h3>
+    <ul>
+      <li>IEC 60079-0 Ed.8(2026): 주변온도(Ta) 마킹 의무화 등 개정사항 — 기존 장비 재검토 사유 발생</li>
+      <li>대형 프로젝트의 국제표준 기반 방폭검증 선례 이후, 국내 검사·감독 기준의 상향 흐름</li>
+      <li>HAVD 부재 상태에서 감사를 맞으면 시정 기간·비용이 수배로 증가 — <b>사전진단이 가장 저렴한 시점은 오늘</b></li>
+    </ul>
+  </div>
+
+  <div class="trust">
+    <h3>EXTEAM이 직접 수행합니다</h3>
+    <p>21년차 E&amp;I / 15년+ Ex 전문 검사자. 대형 석유화학 콤플렉스(수천 태그 HAVD 완수), LNG 터미널, 정유공장, FPSO 프로젝트에서 발주처·선급(DNV) 검증을 통과한 실무 경력. 국제표준(IEC 60079 / NEC / ATEX)과 국내 규제(KS C IEC, KOSHA) 양쪽의 언어로 문서를 만듭니다.</p>
+    <div class="tchips">
+      <span class="tchip">IECEx CoPC × 7 Units</span>
+      <span class="tchip">CompEx Ex11 (비전기)</span>
+      <span class="tchip">HAVD/HAER 구축</span>
+      <span class="tchip">IEC 60079-14 / -17</span>
+      <span class="tchip">디지털 검사 시스템 보유</span>
+    </div>
+  </div>
+
+  <div class="askgrid" style="margin-top:22px">
+    <div class="askform">
+      <h2>TA · 프로젝트 상담 접수</h2>
+      <p style="font-size:14px;color:var(--ink-soft);margin-bottom:14px">상담 양식에서 회사/공장명, TA 예정 시기, 관심 서비스(TA 방폭검사 · HAVD 구축 · 초기검사 · 정기검사 체계 · 작업자 교육 · KOSHA 사전진단)를 선택해 주세요.</p>
+      <div class="f-field"><label>이런 정보를 주시면 상담이 빨라집니다</label>
+        <div class="chk-row">
+          <label style="cursor:default"><input type="checkbox" checked disabled> 방폭기기 대략 규모 (태그 수)</label>
+          <label style="cursor:default"><input type="checkbox" checked disabled> HAVD/HAER 보유 여부</label>
+          <label style="cursor:default"><input type="checkbox" checked disabled> TA 예정 시기</label>
+          <label style="cursor:default"><input type="checkbox" checked disabled> 최근 KOSHA 지적사항 유무</label>
+        </div>
+      </div>
+      <a href="https://forms.gle/Wi74UUQ4MTEFFBma6" target="_blank" rel="noopener" style="display:block;text-align:center;font-weight:700;font-size:16px;background:var(--steel);color:#fff;border-radius:8px;padding:13px;text-decoration:none">상담 접수하기 →</a>
+      <p class="formnote">TA 6~12개월 전 상담을 권장합니다 · 접수 후 2영업일 내 회신 · 상담은 무료입니다</p>
+    </div>
+
+    <div class="askside">
+      <div class="sidecard">
+        <h3>왜 TA 전에 시작해야 하나</h3>
+        <p>TA 공사범위는 통상 6~12개월 전 확정됩니다. Gap Assessment(Phase 1)가 선행되어야 TA 기간에 <b>검사→펀치→시정</b>이 한 사이클로 끝나고, 준비 없이 TA에 들어가면 정전 기회를 검사 없이 흘려보내게 됩니다.</p>
+      </div>
+      <div class="sidecard">
+        <h3>디지털 검사 시스템</h3>
+        <p>자체 개발한 검사 플랫폼으로 태그별 검사이력·펀치·시정상태가 실시간 집계됩니다. 발주처 담당자는 대시보드로 진행률을 매일 확인하고, 종료 시 기록 전체가 HAVD 디지털 산출물로 남습니다 — 엑셀 취합 방식과의 근본적 차이입니다.</p>
+      </div>
+      <div class="sidecard">
+        <h3>산출물 예시</h3>
+        <p>HAER(기기대장) · 검사계획서 · 검사기록(태그별) · 펀치리스트 및 시정이력 · 기술의견서 · HAVD 통합본. 모든 판정에 <b>표준 조항 근거</b>가 명시됩니다.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="fwrap">
+    <div class="nl">
+      <div class="nlt">
+        <h3>방폭 실무 뉴스레터</h3>
+        <p>현장 사례 · 표준 개정 소식 · 판정 논리를 이메일로 받아보세요. (월 1회)</p>
+      </div>
+      <input type="email" placeholder="이메일 주소" aria-label="뉴스레터 이메일">
+      <button>구독하기</button><!-- TODO: 스티비/메일리 연결 -->
+    </div>
+    <div class="fmeta">
+      <b>EXTEAM</b> — Hazardous Area Verification Specialists<br>
+      본 사이트의 해석 결과와 참조표는 정보 제공 목적의 참고자료이며, 법정검사·인증·법률자문에 해당하지 않습니다. 장비의 최종 수용 여부에 대한 책임은 사업주/운영자에게 있습니다.<br>
+      기준 표준: IEC 60079-0 · 60079-14 · 60079-17 시리즈 (해석 결과에 적용판 명시) © 2026 EXTEAM
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ================= i18n-ready strings (ko) ================= */
+/* 영어판 전환 시 이 객체만 교체 */
+
+/* ================= 데이터: 보호방식 (검수 반영본) ================= */
+const PROT = {
+  // level: EPL, name, std, legacy: 신표기 안내
+  'da':{name:'내압방폭 (Flameproof)',std:'IEC 60079-1',epl:'Ga'},
+  'db':{name:'내압방폭 (Flameproof)',std:'IEC 60079-1',epl:'Gb'},
+  'dc':{name:'내압방폭 (Flameproof)',std:'IEC 60079-1',epl:'Gc'},
+  'd' :{name:'내압방폭 (Flameproof)',std:'IEC 60079-1',epl:'Gb',legacy:'db'},
+  'eb':{name:'안전증방폭 (Increased safety)',std:'IEC 60079-7',epl:'Gb'},
+  'ec':{name:'안전증방폭 (Increased safety)',std:'IEC 60079-7',epl:'Gc',note:'구 nA 개념 흡수 (60079-7:2015~)'},
+  'e' :{name:'안전증방폭 (Increased safety)',std:'IEC 60079-7',epl:'Gb',legacy:'eb'},
+  'ia':{name:'본질안전 (Intrinsic safety)',std:'IEC 60079-11',epl:'Ga'},
+  'ib':{name:'본질안전 (Intrinsic safety)',std:'IEC 60079-11',epl:'Gb'},
+  'ic':{name:'본질안전 (Intrinsic safety)',std:'IEC 60079-11',epl:'Gc'},
+  'ma':{name:'몰드방폭 (Encapsulation)',std:'IEC 60079-18',epl:'Ga'},
+  'mb':{name:'몰드방폭 (Encapsulation)',std:'IEC 60079-18',epl:'Gb'},
+  'mc':{name:'몰드방폭 (Encapsulation)',std:'IEC 60079-18',epl:'Gc'},
+  'ob':{name:'액체봉입방폭 (Liquid immersion)',std:'IEC 60079-6',epl:'Gb',note:'명칭 변경: Oil→Liquid immersion'},
+  'oc':{name:'액체봉입방폭 (Liquid immersion)',std:'IEC 60079-6',epl:'Gc'},
+  'o' :{name:'액체봉입방폭 (Liquid immersion)',std:'IEC 60079-6',epl:'Gb',legacy:'ob'},
+  'pxb':{name:'압력방폭 (Pressurized)',std:'IEC 60079-2',epl:'Gb'},
+  'pyb':{name:'압력방폭 (Pressurized)',std:'IEC 60079-2',epl:'Gb'},
+  'pzc':{name:'압력방폭 (Pressurized)',std:'IEC 60079-2',epl:'Gc'},
+  'pv':{name:'압력방폭 (Pressurization)',std:'IEC 60079-2',epl:'Gb/Gc',multi:['Gb','Gc']},
+  'px':{name:'압력방폭 (Pressurized)',std:'IEC 60079-2',epl:'Gb',legacy:'pxb'},
+  'py':{name:'압력방폭 (Pressurized)',std:'IEC 60079-2',epl:'Gb',legacy:'pyb'},
+  'pz':{name:'압력방폭 (Pressurized)',std:'IEC 60079-2',epl:'Gc',legacy:'pzc'},
+  'qb':{name:'충전방폭 (Powder filling)',std:'IEC 60079-5',epl:'Gb'},
+  'q' :{name:'충전방폭 (Powder filling)',std:'IEC 60079-5',epl:'Gb',legacy:'qb'},
+  'nA':{name:'비점화 — Non-sparking',std:'IEC 60079-15',epl:'Gc',legacy:'ec',lnote:'60079-7의 ec로 이관'},
+  'nC':{name:'비점화 — Sparking equipment',std:'IEC 60079-15',epl:'Gc'},
+  'nR':{name:'비점화 — Restricted breathing',std:'IEC 60079-15',epl:'Gc'},
+  'nL':{name:'비점화 — Energy limitation',std:'IEC 60079-15',epl:'Gc',legacy:'ic',lnote:'60079-11의 ic로 이관'},
+  'op is':{name:'광방폭 — Inherently safe optical radiation',std:'IEC 60079-28',epl:'Ga/Gb/Gc',multi:['Ga','Gb','Gc']},
+  'op pr':{name:'광방폭 — Protected optical radiation',std:'IEC 60079-28',epl:'Gb/Gc',multi:['Gb','Gc'],note:'⚠ op pr은 EPL Ga 불가'},
+  'op sh':{name:'광방폭 — Optical system with interlock',std:'IEC 60079-28',epl:'Ga/Gb/Gc',multi:['Ga','Gb','Gc']},
+  'h':{name:'비전기 방폭 (Non-electrical)',std:'ISO 80079-36/37',epl:'Ga~Gc',multi:['Ga','Gb','Gc'],note:'구 보호방식 c/b/k 통합'},
+  's':{name:'특수방폭 (Special protection)',std:'IEC 60079-33',epl:'마킹 EPL 따름',multi:['Ga','Gb','Gc']}
+};
+const GAS = {
+  'I':{name:'그룹 I — 광산(메탄)',cover:'광산 갱내용'},
+  'IIA':{name:'그룹 IIA — 대표가스: 프로판',cover:'IIA 가스에 사용 가능'},
+  'IIB':{name:'그룹 IIB — 대표가스: 에틸렌',cover:'IIB 및 IIA 가스에 사용 가능'},
+  'IIC':{name:'그룹 IIC — 대표가스: 수소·아세틸렌',cover:'IIC·IIB·IIA 전체 가스에 사용 가능 (최상위)'},
+  'IIB+H2':{name:'그룹 IIB+H2 — IIB에 수소 추가',cover:'IIB·IIA 가스 및 수소에 사용 가능 (아세틸렌 등 기타 IIC 가스는 불가)'}
+};
+const TCLASS = {T1:450,T2:300,T3:200,T4:135,T5:100,T6:85};
+const EPL_ZONE = {Ga:[0,1,2],Gb:[1,2],Gc:[2]};
+const EPL_RANK = {Ga:3,Gb:2,Gc:1};
+
+/* ================= 탭 ================= */
+const nav=document.getElementById('nav');
+nav.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  activate(b.dataset.tab);
+});
+document.body.addEventListener('click',e=>{
+  const g=e.target.closest('[data-goto]'); if(!g)return;
+  e.preventDefault(); activate(g.dataset.goto); window.scrollTo({top:0});
+});
+function activate(tab){
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));
+  document.querySelectorAll('.tabpage').forEach(x=>x.classList.toggle('active',x.id==='tab-'+tab));
+}
+
+/* ================= 참조표 렌더 ================= */
+(function(){
+  const rows=[
+    ['da / db / dc','내압방폭 Flameproof','IEC 60079-1','Ga / Gb / Gc','구표기 d → db (Gb 상당)'],
+    ['eb / ec','안전증방폭 Increased safety','IEC 60079-7','Gb / Gc','구표기 e → eb · ec는 구 nA 흡수'],
+    ['ia / ib / ic','본질안전 Intrinsic safety','IEC 60079-11','Ga / Gb / Gc',''],
+    ['ma / mb / mc','몰드방폭 Encapsulation','IEC 60079-18','Ga / Gb / Gc',''],
+    ['ob / oc','액체봉입방폭 Liquid immersion','IEC 60079-6','Gb / Gc','구표기 o → ob · 명칭 Oil→Liquid'],
+    ['pxb / pyb / pzc / pv','압력방폭 Pressurized','IEC 60079-2','Gb / Gb / Gc / Gb·Gc','구표기 px·py·pz → pxb·pyb·pzc'],
+    ['q / qb','충전방폭 Powder filling','IEC 60079-5','Gb','구표기 q → 현행 qb'],
+    ['nA / nC / nR / nL','비점화 n-type','IEC 60079-15','Gc','nA→ec(60079-7) · nL→ic(60079-11) 이관'],
+    ['op is / op pr / op sh','광방폭 Optical','IEC 60079-28','마킹 따름','⚠ op pr은 Ga 불가 (Gb/Gc만)'],
+    ['h','비전기 Non-electrical','ISO 80079-36/37','Ga ~ Gc','구 c/b/k 통합']
+  ];
+  const t=document.getElementById('protTable');
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="c">${r[0]}</td><td>${r[1]}</td><td class="c">${r[2]}</td><td class="c">${r[3]}</td><td>${r[4]}</td>`;
+    t.appendChild(tr);
+  });
+})();
+
+/* ================= 해석기 ================= */
+const input=document.getElementById('markInput');
+const btn=document.getElementById('decodeBtn');
+const out=document.getElementById('result');
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{input.value=c.textContent;decode();}));
+btn.addEventListener('click',decode);
+input.addEventListener('keydown',e=>{if(e.key==='Enter')decode();});
+
+function decode(){
+  const raw=input.value.trim();
+  if(!raw){out.innerHTML='';return;}
+  let s=raw.replace(/\s+/g,' ');
+  // 분진/광산 감지
+  if(/III[ABC]?|\bD[abc]\b|\bt[abc]\b|\bta\b|\btb\b|\btc\b/.test(s.replace(/^Ex/i,''))&&/III|Da|Db|Dc/.test(s)){
+    out.innerHTML=`<div class="errbox">분진(Dust) 방폭 마킹으로 보입니다. 분진 해석(Ex t, 그룹 III, Da/Db/Dc)은 v2에서 지원 예정입니다. 급한 판정이 필요하시면 <a href="#" data-goto="ask">기술 문의</a>를 이용해 주세요.</div>`;
+    return;
+  }
+  // 토큰화
+  let body=s.replace(/^Ex\s*/i,'');
+  // op is / op pr / op sh 먼저 추출
+  const found=[]; const legacyNotes=[]; const notes=[];
+  ['op is','op pr','op sh'].forEach(k=>{
+    const re=new RegExp(k.replace(' ','\\s+'),'i');
+    if(re.test(body)){found.push(k);body=body.replace(re,' ');}
+  });
+  const tokens=body.split(/[\s,\/]+/).filter(Boolean);
+  let gas=null, tclass=null, tempExplicit=null, eplMarked=null, amb=null;
+  const unknown=[];
+
+  tokens.forEach(tk=>{
+    if(/^IIB\+H2$/i.test(tk)){gas='IIB+H2';return;}
+    if(/^(I|IIA|IIB|IIC)$/i.test(tk)){gas=tk.toUpperCase().replace('IIA','IIA').replace('IIB','IIB').replace('IIC','IIC');if(gas==='I')gas='I';return;}
+    if(/^T[1-6]$/i.test(tk)){tclass=tk.toUpperCase();return;}
+    if(/^T\d{2,3}\s*°?C$/i.test(tk)){tempExplicit=tk;return;}
+    if(/^(Ga|Gb|Gc)$/i.test(tk)){eplMarked=tk[0].toUpperCase()+tk[1].toLowerCase();return;}
+    if(/^(Ma|Mb|Da|Db|Dc)$/i.test(tk)){eplMarked=tk;return;}
+    // 온도범위 (-20°C≤Ta≤+60°C 류)는 통짜로 무시하되 감지
+    if(/Ta|Tamb/i.test(tk)){amb=tk;return;}
+    // 보호방식
+    const key=Object.keys(PROT).find(k=>k.toLowerCase()===tk.toLowerCase());
+    if(key){found.push(key);return;}
+    unknown.push(tk);
+  });
+
+  if(found.length===0&&!gas&&!tclass){
+    out.innerHTML=`<div class="errbox">마킹을 해석하지 못했습니다. "Ex db eb IIC T4 Gb" 형식으로 입력해 주세요. 인식 불가 토큰: ${unknown.join(', ')||'없음'}</div>`;
+    return;
+  }
+
+  /* EPL 결정: 마킹 우선, 없으면 보호방식에서 추론(가장 낮은 보호수준) */
+  let epl=eplMarked, eplInferred=false;
+  if(!epl){
+    let minRank=99;
+    found.forEach(k=>{
+      const p=PROT[k];
+      const es=p.multi?p.multi:[p.epl];
+      es.forEach(e=>{if(EPL_RANK[e]&&EPL_RANK[e]<minRank)minRank=EPL_RANK[e];});
+    });
+    epl=Object.keys(EPL_RANK).find(k=>EPL_RANK[k]===minRank)||null;
+    if(epl)eplInferred=true;
+  }
+  const zones=epl&&EPL_ZONE[epl]?EPL_ZONE[epl]:null;
+
+  /* 표 행 구성 */
+  let rows='';
+  found.forEach(k=>{
+    const p=PROT[k];
+    let code=`Ex ${k}`;
+    let legacyBadge='';
+    if(p.legacy){legacyBadge=`<span class="legacy">구표기 → ${p.legacy}</span>`;
+      legacyNotes.push(`<b>Ex ${k}</b>는 구표기입니다. 현행 표준(IEC 60079-0 최신판) 기준 신표기는 <b>Ex ${p.legacy}</b>${p.lnote?` (${p.lnote})`:''}이며, 구표기 장비는 인증 당시 판 기준으로 유효하나 신규 선정 시 신표기·EPL 명시 장비를 확인하세요.`);}
+    rows+=`<tr><td class="code">${code}${legacyBadge}</td><td><span class="kname">${p.name}</span>${p.note?`<br><span style="font-size:12.5px;color:var(--ink-soft)">${p.note}</span>`:''}</td><td class="std">${p.std}</td><td class="code">${p.epl}</td></tr>`;
+  });
+  if(gas){const g=GAS[gas];rows+=`<tr><td class="code">${gas}</td><td><span class="kname">${g.name}</span><br><span style="font-size:12.5px;color:var(--ink-soft)">${g.cover}</span></td><td class="std">IEC 60079-0</td><td class="code">—</td></tr>`;}
+  if(tclass){rows+=`<tr><td class="code">${tclass}</td><td><span class="kname">온도등급 — 최고표면온도 ≤ ${TCLASS[tclass]} °C</span><br><span style="font-size:12.5px;color:var(--ink-soft)">발화점(AIT)이 ${TCLASS[tclass]} °C를 초과하는 가스에 적합</span></td><td class="std">IEC 60079-0</td><td class="code">—</td></tr>`;}
+  if(tempExplicit){rows+=`<tr><td class="code">${tempExplicit}</td><td><span class="kname">최고표면온도 직접 표기</span></td><td class="std">IEC 60079-0</td><td class="code">—</td></tr>`;}
+  if(eplMarked){rows+=`<tr><td class="code">${eplMarked}</td><td><span class="kname">장비보호수준 (EPL)</span></td><td class="std">IEC 60079-0 / -14</td><td class="code">${eplMarked}</td></tr>`;}
+
+  /* Zone 뱃지 */
+  let zbadges='';
+  if(zones){[0,1,2].forEach(z=>{zbadges+=`<span class="zbadge ${zones.includes(z)?'on':'off'}">Zone ${z}</span>`;});}
+
+  /* 자동 주의문 */
+  if(found.length>1)notes.push(`<b>복합 방폭구조</b>입니다 (${found.map(f=>'Ex '+f).join(' + ')}). 각 보호방식이 적용된 부위(예: 주외함 db / 단자함 eb)를 도면·인증서에서 확인하고 부위별로 검사하세요.`);
+  if(eplInferred&&epl)notes.push(`마킹에 EPL이 없어 보호방식으로부터 <b>${epl} 상당</b>으로 추론했습니다. 구형(EPL 도입 이전) 인증 장비일 수 있으며, 정확한 EPL은 인증서(CoC)로 확인하세요.`);
+  if(!eplMarked&&!eplInferred)notes.push(`EPL을 결정할 수 없습니다. 인증서에서 EPL을 확인하세요.`);
+  if(gas==='IIB+H2')notes.push(`<b>IIB+H2</b>는 IIB 범위에 수소만 추가한 그룹입니다. 아세틸렌·이황화탄소 등 다른 IIC 가스 환경에는 사용할 수 없습니다.`);
+  if(found.includes('op pr'))notes.push(`<b>op pr</b>은 EPL <b>Ga에 사용할 수 없습니다</b> (Gb/Gc만). Zone 0 광학장비는 op is 또는 op sh 여부를 확인하세요.`);
+  if(!amb)notes.push(`주변온도(Ta) 표기가 없습니다. IEC 60079-0 <b>Ed.7 이하</b> 인증은 −20~+40 °C가 기본값이나, <b>Ed.8(2026)부터는 Ta 명시가 의무</b>입니다 — Ed.8 인증 장비에 Ta 표기가 없으면 그 자체로 마킹 부적합입니다.`);
+  notes.push(`인증서 번호 끝의 <b>X</b>는 특정사용조건(SCOU) 존재 — 인증서 조건을 반드시 확인. <b>U</b>는 Ex Component로 <b>단독 사용 불가</b> — 장비단위 인증 필요.`);
+  notes.push(`본 해석은 마킹 문자열에 대한 일반 해석입니다. 실제 설치 수용 여부는 인증서(CoC) 원문, 위험구역 구분도(HAC), 프로젝트 사양과 함께 판정해야 합니다.`);
+
+  const legacyBlock=legacyNotes.map(n=>`<div class="note warn">🔁 ${n}</div>`).join('');
+  const noteBlock=notes.map(n=>`<div class="note info">${n}</div>`).join('');
+  const unknownBlock=unknown.length?`<div class="note danger">인식하지 못한 토큰: <b>${unknown.join(', ')}</b> — 오타이거나 v1 미지원 표기일 수 있습니다.</div>`:'';
+
+  out.innerHTML=`
+    <div class="nameplate"><span class="rv1"></span><span class="rv2"></span>
+      <div class="np-mark">${s.replace(/</g,'&lt;')}</div>
+      ${zones?`<div class="np-verdict">${zbadges}</div>`:''}
+      <table class="np-table">
+        <tr><th>요소</th><th>해석</th><th>표준</th><th>EPL</th></tr>
+        ${rows}
+      </table>
+    </div>
+    <div class="notes">${legacyBlock}${unknownBlock}${noteBlock}</div>`;
+
+  /* 전자책 배너 맥락 연동 (Unit별 상품 매핑) */
+  const eb=document.getElementById('ebookDesc');
+  const ebL=document.getElementById('ebookLink');
+  const ebT=document.getElementById('ebookTitle');
+  const KMONG={u1:'https://kmong.com/gig/332401',u2:'https://kmong.com/gig/334968',u3:'https://kmong.com/gig/336455',u4:'https://kmong.com/gig/339846',u5:'https://kmong.com/gig/348566',u6:'https://kmong.com/gig/350131',u7:'https://kmong.com/gig/612986',all:'https://kmong.com/@ExMan'};
+  const has=p=>found.some(f=>f===p||f.startsWith(p));
+  if(has('d')){ebT.textContent='📘 방폭 실무 Tips — Unit.2 내압방폭 [Ex d]';eb.textContent='보호원리부터 flamepath 검사 포인트, barrier gland 조건까지 — 내압방폭 설치·검사 실무 전자책.';ebL.href=KMONG.u2;}
+  else if(has('e')){ebT.textContent='📘 방폭 실무 Tips — Unit.3 안전증방폭 [Ex e]';eb.textContent='터미널 규정, tE 타임, 홀 추가 가공 이슈 등 안전증방폭 설치·검사 실무 전자책.';ebL.href=KMONG.u3;}
+  else if(has('i')){ebT.textContent='📘 방폭 실무 Tips — Unit.4 본질안전 [Ex i]';eb.textContent='IS 회로 검증, entity 계산, simple apparatus 판정 등 본질안전 실무 전자책.';ebL.href=KMONG.u4;}
+  else if(has('h')){ebT.textContent='📘 방폭 실무 Tips — Unit.7 기계방폭';eb.textContent='ISO 80079-36/37 기반 비전기(기계) 장비의 점화위험평가·마킹·검사 실무 전자책.';ebL.href=KMONG.u7;}
+  else if(has('n')||has('p')||has('o')||has('q')||has('m')||has('op')||has('s')){ebT.textContent='📘 방폭 실무 Tips — Unit.5 기타 방폭 유형';eb.textContent='Ex n·p·o·q·m·op·s 및 복합방폭의 설치·검사 실무 전자책.';ebL.href=KMONG.u5;}
+  else{ebT.textContent='📘 방폭 실무 Tips 전자책 시리즈';eb.textContent='Unit별 실무 가이드 전체 시리즈를 확인해 보세요 (일반원리부터 기계방폭까지).';ebL.href=KMONG.all;}
+}
+
+/* ================= 문의: 구글폼 연결 완료 (데모 핸들러 제거) ================= */
+</script>
+</body>
+</html>
