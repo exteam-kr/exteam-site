@@ -611,12 +611,12 @@ function decode(){
     if(/^T[1-6]$/i.test(tk)){tclass=tk.toUpperCase();return;}
     if(/^T\d{2,3}\s*°?C$/i.test(tk)){tempExplicit=tk;return;}
     if(/^(Ga|Gb|Gc)$/i.test(tk)){eplMarked=tk[0].toUpperCase()+tk[1].toLowerCase();return;}
-    if(/^(Ma|Mb|Da|Db|Dc)$/i.test(tk)){eplMarked=tk;return;}
-    // 온도범위 (-20°C≤Ta≤+60°C 류)는 통짜로 무시하되 감지
-    if(/Ta|Tamb/i.test(tk)){amb=tk;return;}
-    // 보호방식
+    if(/^(Ma|Mb|Da|Db|Dc)$/.test(tk)){eplMarked=tk;return;} /* 대문자 시작만 EPL로 인정 — 소문자 db/ma는 보호방식 */
+    // 보호방식 (EPL보다 먼저 소문자 코드 매칭)
     const key=Object.keys(PROT).find(k=>k.toLowerCase()===tk.toLowerCase());
     if(key){found.push(key);return;}
+    // 온도범위 (-20°C≤Ta≤+60°C 류)는 통짜로 무시하되 감지
+    if(/Ta|Tamb/i.test(tk)){amb=tk;return;}
     unknown.push(tk);
   });
 
